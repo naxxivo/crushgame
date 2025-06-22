@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crash Flight</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --primary-color: #00ff66; /* Green glow */
+            --secondary-color: #ffcc00; /* Yellow accent */
+            --text-color: #e0e0e0;
+            --panel-bg: #1a1a1a;
+            --button-bg: #222222;
+            --button-hover-bg: #333333;
+            --danger-color: #ff4d4d;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for better content display */
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+            overflow-y: auto; /* Enable scrolling for smaller screens */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 500px; /* Constrain width for mobile-first readability */
+            background-color: var(--panel-bg);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 0 40px rgba(0, 255, 102, 0.2); /* Soft green glow */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            border: 2px solid rgba(0, 255, 102, 0.4);
+        }
+
+        .header-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary-color);
+            text-shadow: 0 0 15px var(--primary-color);
+            letter-spacing: 2px;
+        }
+
+        .info-panel {
+            background-color: #222222;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #333333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            color: var(--text-color);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .multiplier-display {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4.5rem; /* Larger for impact */
+            font-weight: 700;
+            color: var(--primary-color);
+            text-shadow: 0 0 25px var(--primary-color), 0 0 40px rgba(0, 255, 102, 0.6);
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #111111;
+            border-radius: 1rem;
+            padding: 1rem;
+            border: 1px solid rgba(0, 255, 102, 0.5);
+            transition: all 0.1s ease-out; /* Smooth transition for multiplier update */
+        }
+
+        .plane-animation {
+            font-size: 3rem;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-out;
+            transform: translateY(20px);
+        }
+
+        .plane-animation.flying {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .bet-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .bet-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #000;
+            border: 1px solid var(--primary-color);
+            border-radius: 0.75rem;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            box-shadow: inset 0 0 8px rgba(0, 255, 102, 0.2);
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .bet-input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: inset 0 0 10px rgba(255, 204, 0, 0.4);
+        }
+
+        .game-button {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: 0 5px 15px rgba(0, 255, 102, 0.3);
+            color: var(--text-color);
+            background-color: var(--primary-color);
+            border: none;
+            text-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        .game-button.place-bet {
+            background-color: var(--primary-color);
+        }
+
+        .game-button.cash-out {
+            background-color: var(--secondary-color);
+            box-shadow: 0 5px 15px rgba(255, 204, 0, 0.3);
+            color: #333;
+        }
+
+        .game-button.disabled {
+            background-color: #333333;
+            color: #777777;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .game-button:not(.disabled):hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 255, 102, 0.5);
+            filter: brightness(1.1);
+        }
+        .game-button.cash-out:not(.disabled):hover {
+            box-shadow: 0 8px 20px rgba(255, 204, 0, 0.5);
+        }
+
+
+        .message-box {
+            background-color: #333;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+
+        .message-box.success {
+            background-color: #006400; /* Darker green */
+            color: #ccffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.6);
+        }
+
+        .message-box.error {
+            background-color: #8b0000; /* Dark red */
+            color: #ffcccc;
+            box-shadow: 0 0 15px rgba(255, 77, 77, 0.6);
+        }
+
+        .round-history-panel {
+            background-color: #222222;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #333333;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .round-history-list {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-height: 80px; /* Limit height for history */
+            overflow-y: auto;
+            scrollbar-width: thin; /* Firefox */
+            scrollbar-color: var(--primary-color) #222; /* Firefox */
+        }
+        .round-history-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .round-history-list::-webkit-scrollbar-track {
+            background: #222;
+            border-radius: 4px;
+        }
+        .round-history-list::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 4px;
+            border: 2px solid #222;
+        }
+
+        .history-item {
+            padding: 0.3rem 0.6rem;
+            background-color: #3a3a3a;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 0 5px rgba(255, 204, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-text-color flex flex-col items-center justify-start min-h-screen p-4">
+
+    <div class="game-container">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center header-title">Crash Flight</h1>
+
+        <div class="info-panel">
+            <span>Balance: <span id="balance-display">$1000.00</span></span>
+            <span>Round: <span id="round-display">1</span></span>
+        </div>
+
+        <div class="multiplier-display" id="multiplier-display">
+            x1.00
+        </div>
+
+        <div id="plane-animation" class="plane-animation">
+            ✈️
+        </div>
+
+        <div class="bet-controls">
+            <input type="number" id="bet-input" class="bet-input" placeholder="Enter bet amount" value="10" min="1" step="1">
+            <button id="place-bet-button" class="game-button place-bet">Place Bet</button>
+            <button id="cash-out-button" class="game-button cash-out disabled">Cash Out</button>
+        </div>
+
+        <div id="message-box" class="message-box hidden">
+            </div>
+
+        <div class="round-history-panel">
+            <h2 class="text-md font-bold text-center mb-2 text-primary-color">Recent Crashes</h2>
+            <div id="round-history-list" class="round-history-list">
+                </div>
+        </div>
+
+        <p class="text-xs text-center text-gray-500 mt-4">Crash Flight uses a provably fair algorithm for randomized crash points.</p>
+    </div>
+
+    <script>
+        // Game State Variables
+        let balance = 1000.00; // Starting balance
+        let currentRound = 1;
+        let currentMultiplier = 1.00;
+        let crashPoint = 0; // The multiplier at which the plane crashes
+        let gameActive = false; // True when multiplier is rising
+        let betAmount = 0;
+        let hasCashedOut = false;
+        let animationFrameId = null; // For requestAnimationFrame loop
+        let lastTime = 0; // For delta time calculation
+        let roundHistory = [];
+        const MAX_HISTORY = 10; // Max number of past crashes to show
+
+        // DOM Elements
+        const balanceDisplay = document.getElementById('balance-display');
+        const roundDisplay = document.getElementById('round-display');
+        const multiplierDisplay = document.getElementById('multiplier-display');
+        const planeAnimation = document.getElementById('plane-animation');
+        const betInput = document.getElementById('bet-input');
+        const placeBetButton = document.getElementById('place-bet-button');
+        const cashOutButton = document.getElementById('cash-out-button');
+        const messageBox = document.getElementById('message-box');
+        const roundHistoryList = document.getElementById('round-history-list');
+
+        // --- Utility Functions ---
+
+        // Displays a temporary message to the user
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.className = `message-box mt-4 ${type}`;
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+                messageBox.classList.remove(type);
+            }, 3000); // Message disappears after 3 seconds
+        }
+
+        // Updates the UI displays
+        function updateUI() {
+            balanceDisplay.textContent = `$${balance.toFixed(2)}`;
+            roundDisplay.textContent = currentRound;
+            multiplierDisplay.textContent = `x${currentMultiplier.toFixed(2)}`;
+        }
+
+        // Generates a new random crash point using an exponential distribution for fairness feel
+        // Lower multipliers are more common, higher ones are rarer
+        function generateCrashPoint() {
+            let randomValue = Math.random(); // 0 to 1
+            // Use a logarithmic distribution: y = 1 / (1 - x) * scale
+            // The smaller the randomValue, the smaller 1-randomValue, and thus the larger the multiplier.
+            // Adjust the '100' for a different distribution curve. Higher numbers here make very high crashes less rare.
+            let multiplier = 100 / (100 - randomValue * 99); // Ensures result is > 1.00
+            multiplier = Math.max(1.01, multiplier); // Ensure minimum multiplier is 1.01
+            return parseFloat(multiplier.toFixed(2));
+        }
+
+
+        // --- Game Core Logic ---
+
+        // Initializes a new round
+        function startNewRound() {
+            currentRound++;
+            currentMultiplier = 1.00;
+            betAmount = 0;
+            hasCashedOut = false;
+            gameActive = false; // Wait for bet to be placed
+            crashPoint = generateCrashPoint(); // Determine new crash point
+
+            // Reset UI for new round
+            updateUI();
+            betInput.value = '10'; // Default bet amount
+            betInput.disabled = false;
+            placeBetButton.classList.remove('disabled');
+            placeBetButton.textContent = 'Place Bet';
+            cashOutButton.classList.add('disabled');
+            cashOutButton.textContent = 'Cash Out';
+            planeAnimation.classList.remove('flying');
+            planeAnimation.style.opacity = 0; // Hide plane
+            cancelAnimationFrame(animationFrameId); // Stop any previous animation loops
+            showMessage('Place your bet for the next round!', 'info');
+            console.log(`DEBUG: Crash point for this round: x${crashPoint.toFixed(2)}`); // For debugging
+        }
+
+        // Main game animation loop for multiplier increase
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = (timestamp - lastTime) / 1000; // Time in seconds
+
+            if (gameActive) {
+                // Increase multiplier based on time (adjust speed here)
+                // Linear increase for simplicity, could be exponential or faster over time
+                currentMultiplier += 0.01 * deltaTime * (currentMultiplier < 10 ? 10 : Math.sqrt(currentMultiplier)); // Faster as it goes higher
+                multiplierDisplay.textContent = `x${currentMultiplier.toFixed(2)}`;
+
+                // Check for crash
+                if (currentMultiplier >= crashPoint) {
+                    crashPlane();
+                    return; // Stop the loop
+                }
+            }
+            lastTime = timestamp;
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Handles placing a bet
+        function placeBet() {
+            const parsedBet = parseFloat(betInput.value);
+
+            if (isNaN(parsedBet) || parsedBet <= 0) {
+                showMessage('Please enter a valid bet amount!', 'error');
+                return;
+            }
+
+            if (parsedBet > balance) {
+                showMessage('Insufficient balance!', 'error');
+                return;
+            }
+
+            betAmount = parsedBet;
+            balance -= betAmount; // Deduct bet immediately
+            updateUI();
+            showMessage(`Bet $${betAmount.toFixed(2)} placed! Plane taking off...`, 'info');
+
+            // Disable betting controls and enable cash out
+            betInput.disabled = true;
+            placeBetButton.classList.add('disabled');
+            placeBetButton.textContent = 'In Flight...';
+            cashOutButton.classList.remove('disabled');
+            cashOutButton.textContent = `Cash Out ($${(betAmount * currentMultiplier).toFixed(2)})`;
+
+
+            gameActive = true;
+            planeAnimation.classList.add('flying');
+            planeAnimation.style.opacity = 1; // Show plane
+            lastTime = performance.now(); // Reset lastTime for new animation loop
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Handles cashing out
+        function cashOut() {
+            if (!gameActive || hasCashedOut) return;
+
+            hasCashedOut = true;
+            gameActive = false; // Stop the game loop
+            cancelAnimationFrame(animationFrameId);
+
+            const winnings = betAmount * currentMultiplier;
+            balance += winnings; // Add winnings to balance
+            updateUI();
+            showMessage(`CASHED OUT at x${currentMultiplier.toFixed(2)}! You won $${winnings.toFixed(2)}!`, 'success');
+            addRoundToHistory(currentMultiplier, 'win');
+
+            // Disable cash out button and prepare for next round
+            cashOutButton.classList.add('disabled');
+            placeBetButton.textContent = 'Place Bet';
+            setTimeout(startNewRound, 2000); // Start new round after a short delay
+        }
+
+        // Handles the plane crashing
+        function crashPlane() {
+            gameActive = false; // Stop the game loop
+            cancelAnimationFrame(animationFrameId);
+            planeAnimation.classList.remove('flying'); // Hide plane
+            planeAnimation.style.opacity = 0; // Hide plane
+
+            if (!hasCashedOut) {
+                showMessage(`CRASHED at x${currentMultiplier.toFixed(2)}! You lost $${betAmount.toFixed(2)}.`, 'error');
+                addRoundToHistory(currentMultiplier, 'loss');
+            }
+            // If already cashed out, message was already shown, and balance updated.
+
+            // Disable buttons and prepare for next round
+            cashOutButton.classList.add('disabled');
+            placeBetButton.classList.add('disabled'); // Can't place bet in crashed state
+            placeBetButton.textContent = 'Crashed!';
+            setTimeout(startNewRound, 2500); // Start new round after a delay
+        }
+
+        // Adds the current round's result to history
+        function addRoundToHistory(multiplier, resultType) {
+            const historyItem = document.createElement('span');
+            historyItem.classList.add('history-item');
+            historyItem.textContent = `x${multiplier.toFixed(2)}`;
+            historyItem.style.backgroundColor = resultType === 'win' ? '#006400' : '#8b0000'; // Green for win, red for loss
+
+            roundHistory.unshift({ multiplier, resultType }); // Add to the beginning
+            if (roundHistory.length > MAX_HISTORY) {
+                roundHistory.pop(); // Remove oldest if exceeding max history
+            }
+            renderRoundHistory();
+        }
+
+        // Renders the round history list
+        function renderRoundHistory() {
+            roundHistoryList.innerHTML = ''; // Clear current list
+            roundHistory.forEach(item => {
+                const historyItem = document.createElement('span');
+                historyItem.classList.add('history-item');
+                historyItem.textContent = `x${item.multiplier.toFixed(2)}`;
+                historyItem.style.backgroundColor = item.resultType === 'win' ? '#006400' : '#8b0000';
+                roundHistoryList.appendChild(historyItem);
+            });
+        }
+
+        // --- Event Listeners ---
+        placeBetButton.addEventListener('click', placeBet);
+        cashOutButton.addEventListener('click', cashOut);
+
+        // Update cash out button text dynamically as multiplier rises
+        const observer = new MutationObserver(() => {
+            if (gameActive && !hasCashedOut) {
+                cashOutButton.textContent = `Cash Out ($${(betAmount * currentMultiplier).toFixed(2)})`;
+            }
+        });
+        observer.observe(multiplierDisplay, { childList: true, subtree: true });
+
+
+        // Initial game setup on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateUI();
+            startNewRound();
+        });
+    </script>
+</body>
+</html>
